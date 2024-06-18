@@ -130,14 +130,12 @@ class RemoteLRS implements LRSInterface
 
         $success = false;
 
-        //
         // errors from fopen are reported to PHP as E_WARNING which prevents us
         // from getting a reasonable message, so set an error handler here for
         // the immediate call to turn it into an exception, and then restore
         // normal handling
-        //
         set_error_handler(
-            function ($errno, $errstr, $errfile, $errline, array $errcontext) {
+            function ($errno, $errstr, $errfile, $errline) {
                 // "!== false" is intentional. strpos() can return 0, which is falsey, but returning
                 // 0 matches our "true" condition. Using strict equality to avoid that confusion.
                 if ($errno == E_NOTICE && strpos($errstr, 'Array to string conversion') !== false) {
@@ -162,7 +160,13 @@ class RemoteLRS implements LRSInterface
             $fp = fopen($url, 'rb', false, $context);
 
             if (! $fp) {
-                $content = "Request failed: $php_errormsg";
+                $content = "Request failed";
+
+                $last_error = error_get_last();
+
+                if($last_error && $last_error['type'] === E_ERROR) {
+                    $content .= ": " . $last_error['message'];
+                }
             }
         }
         catch (\ErrorException $ex) {
